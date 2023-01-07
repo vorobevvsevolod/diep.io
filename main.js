@@ -10,12 +10,12 @@ game.newLoop("myGame", () => {
     TankObject.DrawTankAllDetails();
     
 	
-    
+
     //Отрисовка карты
     SceneObject.DrawMap();
 });
-	
+pjs.system.setSmoothing(false);	
 game.setLoop("myGame");
 SceneObject.StartGame();
-SceneObject.ChangendScaleCamera(1);
+SceneObject.ChangendScaleCamera(1.4);
 game.start();
