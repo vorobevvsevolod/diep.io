@@ -6,15 +6,15 @@ Player = {
     maxHealth: 1000,
     bodyDamage: 0,
     bullet:{
-        speed: 3,
+        speed: 8,
         penetration: 100,
         damage: 30,
-        reload: 40,
+        reload: 50,
         size: 12,
-        timeLife: 100,
-        recoil: 15
+        timeLife: 200,
+        recoil: 5
     },
-    movementSpeed: 2,
+    movementSpeed: 3,
 
     updateLvL(count){
         this.Score += count;

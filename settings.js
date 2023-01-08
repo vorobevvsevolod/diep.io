@@ -6,23 +6,26 @@ const mouse = pjs.mouseControl; mouse.initControl();
 pjs.system.initFullPage();
 const point = pjs.vector.point;
 const backgroundMass = [], rectBackgroundMass = [], figureMassRect = [], figureMassTriangle = [], figureMassPoligon = [];
+let MassFigureInCamera = [];
 const WH = game.getWH();
-
+pjs.system.initFPSCheck();
+let cofFpsDel = 0;
+let cofFpsMul = 0;
 const SceneObject = {
     rectingle:{
         experience: 200,
-        count: 100,
+        count: 80,
         health: 100,
         w: 45,
         h: 45,
         fillColor : "#ffe869", 
         strokeColor: '#bfae4e',
-        speedMove: 0.1,
+        speedMove: 0.1 ,
         speedRotate: 0.15
     },
     triangle: {
         experience: 400,
-        count: 70,
+        count: 50,
         health: 150,
         w: 45,
         h: 45,
@@ -33,7 +36,7 @@ const SceneObject = {
     },
     poligon: {
         experience:600,
-        count: 40,
+        count: 20,
         health: 300,
         fillColor : "#768dfc", 
         strokeColor : "#5869bd", 
@@ -45,7 +48,7 @@ const SceneObject = {
         cellMap:{}
     },
     scaleCamera: 1,
-
+    countTimeCollisionInBullet: 60,
     ChangendPositionCamera(position){
         pjs.camera.setPositionC(TankObject.tankAllDetails.tank.getPosition(position));
     },
@@ -108,13 +111,18 @@ const SceneObject = {
                     figureBarCountHealth: _figureBarCountHealth,
                     collisionWithABullet:{
                         flag: false,
-                        countTime: 5,
+                        countTime: this.countTimeCollisionInBullet,
                         x: 0,
                         y:0
                     },
                     collisionWithAFigure:{
                         flag: false,
                         countTime: 100,
+                    },
+                    death:{
+                        flag: false,
+                        dying: false,
+                        countTime: 15
                     }
             });
         }
@@ -164,13 +172,18 @@ const SceneObject = {
                 figureBarCountHealth: _figureBarCountHealth,
                 collisionWithABullet:{
                     flag: false,
-                    countTime: 5,
+                    countTime: this.countTimeCollisionInBullet,
                     x: 0,
                     y:0
                 },
                 collisionWithAFigure:{
                     flag: false,
                     countTime: 100,
+                },
+                death:{
+                    flag: false,
+                    dying: false,
+                    countTime: 15
                 }
             });
         }
@@ -221,13 +234,18 @@ const SceneObject = {
                 figureBarCountHealth: _figureBarCountHealth,
                 collisionWithABullet:{
                     flag: false,
-                    countTime: 5,
+                    countTime: this.countTimeCollisionInBullet,
                     x: 0,
                     y:0
                 },
                 collisionWithAFigure:{
                     flag: false,
                     countTime: 100,
+                },
+                death:{
+                    flag: false,
+                    dying: false,
+                    countTime: 15
                 }
             });
         }
@@ -329,21 +347,20 @@ const SceneObject = {
                     if((figure[i].x < 100 && figure[i].isStaticIntersect(rectBackgroundMass[3].getStaticBox())) || (figure[i].x > 3900 && figure[i].isStaticIntersect(rectBackgroundMass[4].getStaticBox()))) {figure[i].moveX *= -1; figure[i].collisionWithAFigure.flag = true;}
                     if((figure[i].y < 100 && figure[i].isStaticIntersect(rectBackgroundMass[1].getStaticBox())) || (figure[i].y > 3900 && figure[i].isStaticIntersect(rectBackgroundMass[2].getStaticBox()))) {figure[i].moveY *= -1; figure[i].collisionWithAFigure.flag = true;}
 
-                    figure[i].turn(figure[i].speedRotate * figure[i].rotateAngle);
+                    figure[i].turn((figure[i].speedRotate * cofFpsDel) * figure[i].rotateAngle);
                     
                     if(figure[i].collisionWithABullet.flag){
-                        if(figure[i].collisionWithABullet.countTime != 0){
-                            figure[i].move(point((figure[i].collisionWithABullet.y / 4, figure[i].collisionWithABullet.x / 4)));
-                            figure[i].move(point(figure[i].speedMove * figure[i].moveX, figure[i].speedMove * figure[i].moveY))
+                        if(figure[i].collisionWithABullet.countTime >= 0){
+                            figure[i].move(point((figure[i].collisionWithABullet.x  * figure[i].collisionWithABullet.countTime, figure[i].collisionWithABullet.y * figure[i].collisionWithABullet.countTime)));
                             figure[i].fillColor = "#F14E54";
                             figure[i].strokeColor = "#B43A3F";
                             figure[i].collisionWithABullet.countTime--;
                         }else {
                             figure[i].collisionWithABullet.flag = false;
-                            figure[i].collisionWithABullet.countTime = 5;
+                            figure[i].collisionWithABullet.countTime = SceneObject.countTimeCollisionInBullet ;
                         }
                     }else {
-                        figure[i].move(point(figure[i].speedMove * figure[i].moveX, figure[i].speedMove * figure[i].moveY));
+                        figure[i].move(point((figure[i].speedMove * cofFpsDel) * figure[i].moveX, (figure[i].speedMove * cofFpsDel) * figure[i].moveY));
                         switch(name){
                             case 'rectingle': figure[i].fillColor = SceneObject.rectingle.fillColor; figure[i].strokeColor = SceneObject.rectingle.strokeColor; break;
                             case 'triangle': figure[i].fillColor = SceneObject.triangle.fillColor; figure[i].strokeColor = SceneObject.triangle.strokeColor; break;
@@ -351,16 +368,20 @@ const SceneObject = {
                         }
                     }
 
+                    if(figure[i].death.dying){
+                        figure[i].alpha -= 0.05;
+                        figure[i].death.countTime--;
+                        if(figure[i].death.countTime <= 0) {figure[i].death.dying = false; figure[i].death.flag = true;}
+                    }
 
-                    
                     if(figure[i].collisionWithAFigure.flag){
                         if(figure[i].collisionWithAFigure.countTime != 0){
-                            figure[i].move(point((figure[i].speedMove * figure[i].moveX) * (figure[i].collisionWithAFigure.countTime / 10), (figure[i].speedMove * figure[i].moveY) * (figure[i].collisionWithAFigure.countTime / 10)));
-                            figure[i].turn((figure[i].speedRotate * figure[i].rotateAngle) * (figure[i].collisionWithAFigure.countTime / 2));
+                            figure[i].move(point(((figure[i].speedMove * cofFpsDel) * figure[i].moveX) * (figure[i].collisionWithAFigure.countTime / 10), ((figure[i].speedMove * cofFpsDel) * figure[i].moveY) * (figure[i].collisionWithAFigure.countTime / 10)));
+                            figure[i].turn(((figure[i].speedRotate * cofFpsDel) * figure[i].rotateAngle) * (figure[i].collisionWithAFigure.countTime / 2));
                             figure[i].collisionWithAFigure.countTime--;
                         }else{
                             figure[i].collisionWithAFigure.flag = false;
-                            figure[i].collisionWithAFigure.countTime = 100;
+                            figure[i].collisionWithAFigure.countTime = 100 * cofFpsMul;
                         }
                     }
                     CollisionFigureSelf();
@@ -376,17 +397,21 @@ const SceneObject = {
 
 
                     figure[i].draw();
-                    if(TankObject.tankAllDetails.tank.getDistanceC(figure[i].getPosition(1)) < TankObject.tankStyle.radius + 20){
-                    TankObject.tankProperty.health -= figure[i].life;
-                    TankObject.DrawTankBar();
-                    switch(name){
-                        case 'rectingle': Player.updateLvL(SceneObject.rectingle.experience);break;
-                        case 'triangle':  Player.updateLvL(SceneObject.triangle.experience); break;
-                        case 'poligon':   Player.updateLvL(SceneObject.poligon.experience);  break;
+                if(TankObject.tankAllDetails.tank.getDistanceC(figure[i].getPosition(1)) < TankObject.tankStyle.radius + 20){
+                    if(!figure[i].death.dying){
+                        TankObject.tankProperty.health -= figure[i].life;
+                        switch(name){
+                            case 'rectingle': Player.updateLvL(SceneObject.rectingle.experience);break;
+                            case 'triangle':  Player.updateLvL(SceneObject.triangle.experience); break;
+                            case 'poligon':   Player.updateLvL(SceneObject.poligon.experience);  break;
+                        }
                     }
-                    figure[i].collisionWithABullet
-                    figure.splice(i,1);
-                    }      
+                    TankObject.DrawTankBar();
+                   
+                    figure[i].death.dying = true;
+                    } 
+                      
+                    if(figure[i].death.flag) figure.splice(i,1);   
                 }
 
                 function CollisionFigureSelf(){
@@ -469,10 +494,11 @@ const TankObject = {
         health: Player.maxHealth,
         regeneration: Player.healtRegen,
         move: false,
-        shooting: false
+        shooting: false,
+        autoShooting: false,
     },
 
-    friction: 0.94,
+    friction: 0.985,
     runawayX: 0,
     runawayY: 0,
     runawayXCof: 0,
@@ -494,51 +520,45 @@ const TankObject = {
 
     createAndDrawBullet(){
         if(TankObject.bullet.speedShooting != 0)TankObject.bullet.speedShooting--; else TankObject.bullet.speedShooting = 0;
-        if(mouse.isDown("LEFT") && TankObject.bullet.speedShooting == 0) {drawBullet(); TankObject.bullet.speedShooting = Player.bullet.reload; } 
+
+        if((mouse.isDown("LEFT") || this.tankProperty.autoShooting) && TankObject.bullet.speedShooting == 0) {
+            drawBullet(); 
+            TankObject.bullet.speedShooting = Player.bullet.reload; 
+            if(!this.tankProperty.move){
+                this.tankProperty.dX = (-this.bullet.MassBullet[0].cordX / Player.bullet.recoil) * cofFpsDel;
+                this.tankProperty.dY = (-this.bullet.MassBullet[0].cordY / Player.bullet.recoil) * cofFpsDel;
+            }
+             
+        } 
+
         if(mouse.isDown("LEFT")) this.tankProperty.shooting = true; else this.tankProperty.shooting = false;
+        MassFigureInCamera = [...pjs.OOP.getArrInCamera(figureMassRect), ...pjs.OOP.getArrInCamera(figureMassTriangle), ...pjs.OOP.getArrInCamera(figureMassPoligon)]
         if(TankObject.bullet.MassBullet.length != 0){
         for(let i in TankObject.bullet.MassBullet){
-            //Движение пуль
-            for(let x in figureMassRect)
-                if(figureMassRect[x].isInCamera)
-                    if(TankObject.bullet.MassBullet[i].getDistanceC(figureMassRect[x].getPosition(1)) < 35){
-                        if(!TankObject.bullet.MassBullet[i].death.dying)figureMassRect[x].life -= TankObject.bullet.damage;
-                        TankObject.bullet.MassBullet[i].life -= SceneObject.rectingle.health;   
-                        if(TankObject.bullet.MassBullet[i].life <= 0) TankObject.bullet.MassBullet[i].death.dying = true;                  
-                        if(figureMassRect[x].life <= 0) {figureMassRect.splice(x,1); Player.updateLvL(SceneObject.rectingle.experience);}
-                            else if(TankObject.bullet.MassBullet[i].death.dying){
-                                figureMassRect[x].collisionWithABullet.x = TankObject.bullet.MassBullet[i].cordX ;
-                                figureMassRect[x].collisionWithABullet.y = TankObject.bullet.MassBullet[i].cordY ;
-                                figureMassRect[x].collisionWithABullet.flag = true;
+            if(TankObject.bullet.MassBullet[i].life <= 0) TankObject.bullet.MassBullet[i].death.dying = true;
+            for(let x in MassFigureInCamera)
+                if(TankObject.bullet.MassBullet[i].isStaticIntersect(MassFigureInCamera[x].getStaticBox()))                   
+                    if(!TankObject.bullet.MassBullet[i].death.dying && !MassFigureInCamera[x].death.dying){
+                        MassFigureInCamera[x].life -= TankObject.bullet.damage;
+                        TankObject.bullet.MassBullet[i].life -= MassFigureInCamera[x].life;
+                        if(MassFigureInCamera[x].life <= 0){
+                            MassFigureInCamera[x].death.dying = true; 
+                            MassFigureInCamera[x].figureBar.visible = false;
+                            MassFigureInCamera[x].figureBarCountHealth.visible = false;
+                            switch(MassFigureInCamera[x].type){
+                                case 'RoundRectObject': Player.updateLvL(SceneObject.rectingle.experience); break;
+                                case 'TriangleObject': Player.updateLvL(SceneObject.triangle.experience); break;
+                                case 'PolygonObject': Player.updateLvL(SceneObject.poligon.experience); break;
                             }
-                    } 
-
-            for(let x in figureMassTriangle)
-                if(figureMassTriangle[x].isInCamera)
-                    if(TankObject.bullet.MassBullet[i].getDistanceC(figureMassTriangle[x].getPosition(1)) < 35){
-                        if(!TankObject.bullet.MassBullet[i].death.dying)figureMassTriangle[x].life -= TankObject.bullet.damage;
-                        TankObject.bullet.MassBullet[i].life -= SceneObject.triangle.health;
-                        if(figureMassTriangle[x].life <= 0) {figureMassTriangle.splice(x,1); Player.updateLvL(SceneObject.triangle.experience);}
-                        else if(TankObject.bullet.MassBullet[i].death.dying){
-                            figureMassTriangle[x].collisionWithABullet.x = TankObject.bullet.MassBullet[i].cordX ;
-                            figureMassTriangle[x].collisionWithABullet.y = TankObject.bullet.MassBullet[i].cordY ;
-                            figureMassTriangle[x].collisionWithABullet.flag = true;
+                        }else{
+                            MassFigureInCamera[x].collisionWithABullet.x = Math.cos(C(Ha(MassFigureInCamera[x].getPosition(1), mouse.getPosition()))) / 100;
+                            MassFigureInCamera[x].collisionWithABullet.y = Math.sin(C(Ha(MassFigureInCamera[x].getPosition(1),mouse.getPosition()))) / 100;
+                            MassFigureInCamera[x].collisionWithABullet.flag = true;
                         }
-                    } 
-            for(let x in figureMassPoligon)
-            if(figureMassPoligon[x].isInCamera)
-                if(TankObject.bullet.MassBullet[i].getDistanceC(figureMassPoligon[x].getPosition(1)) < 45){
-                    if(!TankObject.bullet.MassBullet[i].death.dying)figureMassPoligon[x].life -= TankObject.bullet.damage;
-                    TankObject.bullet.MassBullet[i].life -= SceneObject.poligon.health;
-                    if(figureMassPoligon[x].life <= 0) {figureMassPoligon.splice(x,1);Player.updateLvL(SceneObject.poligon.experience);}
-                    else if(TankObject.bullet.MassBullet[i].death.dying){
-                        figureMassPoligon[x].collisionWithABullet.x = TankObject.bullet.MassBullet[i].cordX ;
-                        figureMassPoligon[x].collisionWithABullet.y = TankObject.bullet.MassBullet[i].cordY ;
-                        figureMassPoligon[x].collisionWithABullet.flag = true;
-                    }
-                } 
+                    }                  
+          
             
-            TankObject.bullet.MassBullet[i].move(point(TankObject.bullet.MassBullet[i].cordX, TankObject.bullet.MassBullet[i].cordY));
+            TankObject.bullet.MassBullet[i].move(point(TankObject.bullet.MassBullet[i].cordX * cofFpsDel, TankObject.bullet.MassBullet[i].cordY * cofFpsDel));
             TankObject.bullet.MassBullet[i].timeLive -= 1;
 
             if((TankObject.bullet.MassBullet[i].life <= 0) || 
@@ -551,7 +571,7 @@ const TankObject = {
 
             //Анимация умирания пули
             if(TankObject.bullet.MassBullet[i].death.dying)
-                if(TankObject.bullet.MassBullet[i].death.countTimeDying != 0){
+                if(TankObject.bullet.MassBullet[i].death.countTimeDying >= 0){
                     TankObject.bullet.MassBullet[i].scaleC(1.01);
                     TankObject.bullet.MassBullet[i].alpha -=0.09;
                     TankObject.bullet.MassBullet[i].cordX -= TankObject.bullet.MassBullet[i].cordX / 7;
@@ -581,8 +601,8 @@ const TankObject = {
                 }));
 
                 TankObject.bullet.MassBullet[TankObject.bullet.MassBullet.length - 1].setUserData({
-                cordX: Math.cos(C(Ha(TankObject.bullet.MassBullet[TankObject.bullet.MassBullet.length - 1].getPosition(1),mouse.getPosition()))) * (TankObject.bullet.speed ),
-                cordY: Math.sin(C(Ha(TankObject.bullet.MassBullet[TankObject.bullet.MassBullet.length - 1].getPosition(1),mouse.getPosition()))) * (TankObject.bullet.speed ),
+                cordX: Math.cos(C(Ha(TankObject.bullet.MassBullet[TankObject.bullet.MassBullet.length - 1].getPosition(1),mouse.getPosition()))) * TankObject.bullet.speed ,
+                cordY: Math.sin(C(Ha(TankObject.bullet.MassBullet[TankObject.bullet.MassBullet.length - 1].getPosition(1),mouse.getPosition()))) * TankObject.bullet.speed ,
                 life: TankObject.bullet.life,
                 timeLive: TankObject.bullet.timeLive,
                 death:{
@@ -592,25 +612,26 @@ const TankObject = {
                 }
             })
 
-            function Ha(a,b){ return 180/Math.PI*Math.atan2(b.y-a.y, b.x-a.x)}
-            function C(a){return Math.PI/180*a}
+            
         }
+        function Ha(a,b){ return 180/Math.PI*Math.atan2(b.y-a.y, b.x-a.x)}
+        function C(a){return Math.PI/180*a}
     },
  
     MoveTank(){
         if(this.tankProperty.health != this.tankProperty.maxHealth) this.tankProperty.health += this.tankProperty.regeneration;
-
+        if(key.isPress("T")) (this.tankProperty.autoShooting) ? this.tankProperty.autoShooting = false : this.tankProperty.autoShooting = true;
         if(key.isDown("W")) {this.runawayYFlag = true; this.runawayYCof = -1;}
         if(key.isDown("S")) {this.runawayYFlag = true; this.runawayYCof = 1; }
         if(key.isDown("D")) {this.runawayXFlag = true; this.runawayXCof = 1; }
         if(key.isDown("A")) {this.runawayXFlag = true; this.runawayXCof = -1;}
         
-        if(key.isUp("W")) {this.runawayYFlag = false; this.cofRunamayY = 0.1; this.runawayY = 0; }
-        if(key.isUp("S")) {this.runawayYFlag = false; this.cofRunamayY = 0.1; this.runawayY = 0; }
-        if(key.isUp("D")) {this.runawayXFlag = false; this.cofRunamayX = 0.1; this.runawayX = 0; }
-        if(key.isUp("A")) {this.runawayXFlag = false; this.cofRunamayX = 0.1; this.runawayX = 0; }
+        if(key.isUp("W")) {this.runawayYFlag = false; this.cofRunamayY = 0.05; this.runawayY = 0; }
+        if(key.isUp("S")) {this.runawayYFlag = false; this.cofRunamayY = 0.05; this.runawayY = 0; }
+        if(key.isUp("D")) {this.runawayXFlag = false; this.cofRunamayX = 0.05; this.runawayX = 0; }
+        if(key.isUp("A")) {this.runawayXFlag = false; this.cofRunamayX = 0.05; this.runawayX = 0; }
 
-
+        if(pjs.keyControl.getCountKeysDown() >= 1) this.tankProperty.move = true; else this.tankProperty.move = false;
         if(this.runawayYFlag){
             this.runawayY = (this.runawayY + (this.cofRunamayY * this.runawayYCof));
             this.tankProperty.dY = this.runawayY;
@@ -626,6 +647,13 @@ const TankObject = {
            (this.runawayXCof == 1 && (this.runawayX > (this.tankProperty.speed * this.runawayXCof)))) 
             this.cofRunamayX = 0;   
         }else this.tankProperty.dX *= this.friction;
+
+        if(this.tankProperty.shooting && !this.tankProperty.move){
+            this.tankProperty.dX *= 0.99;
+            this.tankProperty.dY *= 0.99; 
+        }
+        
+        
     },
 
     DrawTankBar(){
@@ -706,9 +734,18 @@ const TankObject = {
         //Движение танка
         this.MoveTank();
         this.CollisionTank();
+        let cordXRecoil = (-Math.cos(C(Ha(point(WH.w2 / SceneObject.scaleCamera - 7,WH.h2 / SceneObject.scaleCamera - 7),mouse.getPositionS()))) / Player.bullet.recoil);
+        let cordYRecoil = (-Math.sin(C(Ha(point(WH.w2 / SceneObject.scaleCamera - 7,WH.h2 / SceneObject.scaleCamera - 7),mouse.getPositionS()))) / Player.bullet.recoil);
         
-        //this.tankAllDetails.tank.move(point(this.tankProperty.dX + (this.tankProperty.shooting && TankObject.bullet.MassBullet.length != 0 ? -this.bullet.MassBullet[0].cordX / Player.bullet.recoil : 0), this.tankProperty.dY + (this.tankProperty.shooting && TankObject.bullet.MassBullet.length != 0 ? -this.bullet.MassBullet[0].cordY / Player.bullet.recoil : 0)));
-        this.tankAllDetails.tank.move(point(this.tankProperty.dX , this.tankProperty.dY ));
+        if(this.tankProperty.move && this.tankProperty.shooting && TankObject.bullet.MassBullet.length != 0)
+            this.tankAllDetails.tank.move(point((this.tankProperty.dX + cordXRecoil) * cofFpsDel, (this.tankProperty.dY + cordYRecoil) * cofFpsDel));
+            
+        else this.tankAllDetails.tank.move(point(this.tankProperty.dX * cofFpsDel, this.tankProperty.dY * cofFpsDel ));   
+
+        
+       
+        function Ha(a,b){ return 180/Math.PI*Math.atan2(b.y-a.y, b.x-a.x)}
+        function C(a){return Math.PI/180*a}
         SceneObject.ChangendPositionCamera(1);
         //Стрельба
         this.createAndDrawBullet();
