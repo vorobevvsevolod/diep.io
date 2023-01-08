@@ -19,5 +19,5 @@ pjs.system.setSmoothing(false);
 
 game.setLoop("myGame");
 SceneObject.StartGame();
-SceneObject.ChangendScaleCamera(pjs.game.getResolution() - 2);
+SceneObject.ChangendScaleCamera(1.2);
 game.start();
