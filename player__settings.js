@@ -9,10 +9,10 @@ Player = {
         speed: 8,
         penetration: 100,
         damage: 30,
-        reload: 50,
+        reload: 30,
         size: 12,
         timeLife: 200,
-        recoil: 5
+        recoil: 15
     },
     movementSpeed: 3,
 
